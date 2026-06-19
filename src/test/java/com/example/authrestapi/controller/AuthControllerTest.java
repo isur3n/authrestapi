@@ -54,7 +54,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validateRequest)))
                 .andExpect(status().isOk())
-                .andExpect(content().string(appId));
+                .andExpect(content().json("{\"applicationId\":\"abcdefghij\"}"));
     }
 
     @Test
