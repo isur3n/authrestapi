@@ -3,6 +3,7 @@ package com.example.authrestapi.service;
 import com.example.authrestapi.config.AuthProperties;
 import com.example.authrestapi.dto.TokenGenerateResponse;
 import com.example.authrestapi.dto.TokenValidateRequest;
+import com.example.authrestapi.dto.TokenValidationResponse;
 import com.example.authrestapi.store.TokenStore;
 import lombok.extern.slf4j.Slf4j;
 import io.jsonwebtoken.Claims;
@@ -71,7 +72,7 @@ public class AuthTokenService {
                 .build();
     }
 
-    public String validateAndGetApplicationId(TokenValidateRequest request) {
+    public TokenValidationResponse validateAndGetApplicationId(TokenValidateRequest request) {
         log.info("Validating token generatedTime={}", request.generatedTime());
         log.debug("Validating JWT tokenLength={}", request.token().length());
         Claims claims;
@@ -112,7 +113,7 @@ public class AuthTokenService {
         }
 
         log.info("Token validated applicationId={}", applicationId);
-        return applicationId;
+        return new TokenValidationResponse(applicationId);
     }
 
     private boolean shouldRevalidate() {

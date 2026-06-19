@@ -2,6 +2,7 @@ package com.example.authrestapi.controller;
 
 import com.example.authrestapi.dto.TokenGenerateResponse;
 import com.example.authrestapi.dto.TokenValidateRequest;
+import com.example.authrestapi.dto.TokenValidationResponse;
 import com.example.authrestapi.service.AuthTokenService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
@@ -42,16 +43,16 @@ public class AuthController {
     }
 
     @PostMapping("/token/validate")
-    public String validate(@Valid @RequestBody TokenValidateRequest request) {
+    public TokenValidationResponse validate(@Valid @RequestBody TokenValidateRequest request) {
         log.info(
                 "POST /token/validate called generatedTime={}",
                 request.generatedTime()
         );
         log.debug("Validating JWT tokenLength={}", request.token().length());
         try {
-            String applicationId = authTokenService.validateAndGetApplicationId(request);
-            log.info("Token validated successfully applicationId={}", applicationId);
-            return applicationId;
+            TokenValidationResponse response = authTokenService.validateAndGetApplicationId(request);
+            log.info("Token validated successfully applicationId={}", response.applicationId());
+            return response;
         } catch (ResponseStatusException e) {
             log.debug("Token validation failed status={} reason={}", e.getStatusCode(), e.getReason());
             throw e;
