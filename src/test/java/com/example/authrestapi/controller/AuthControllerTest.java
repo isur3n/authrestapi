@@ -48,6 +48,8 @@ class AuthControllerTest {
         JsonNode node = objectMapper.readTree(generateResult.getResponse().getContentAsString());
         Instant generatedTime = Instant.parse(node.get("generatedTime").asText());
         String token = node.get("token").asText();
+        String responseAppId = node.get("applicationId").asText();
+        org.junit.jupiter.api.Assertions.assertEquals(appId, responseAppId);
 
         TokenValidateRequest validateRequest = TokenValidateRequest.builder()
                 .applicationId(appId)

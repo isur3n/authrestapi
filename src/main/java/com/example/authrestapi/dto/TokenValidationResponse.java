@@ -1,5 +1,6 @@
 package com.example.authrestapi.dto;
 
+import com.example.authrestapi.enums.TokenStatus;
 import lombok.Builder;
 
 @Builder

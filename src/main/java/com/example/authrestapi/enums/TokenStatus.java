@@ -1,4 +1,4 @@
-package com.example.authrestapi.dto;
+package com.example.authrestapi.enums;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 

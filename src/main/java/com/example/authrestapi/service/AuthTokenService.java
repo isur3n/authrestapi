@@ -2,7 +2,7 @@ package com.example.authrestapi.service;
 
 import com.example.authrestapi.config.AuthProperties;
 import com.example.authrestapi.dto.TokenGenerateResponse;
-import com.example.authrestapi.dto.TokenStatus;
+import com.example.authrestapi.enums.TokenStatus;
 import com.example.authrestapi.dto.TokenValidateRequest;
 import com.example.authrestapi.dto.TokenValidationResponse;
 import com.example.authrestapi.store.TokenStore;
@@ -26,7 +26,6 @@ import org.springframework.web.server.ResponseStatusException;
 @Slf4j
 @Service
 public class AuthTokenService {
-    private static final Duration TTL = Duration.ofHours(1);
 
     private final TokenStore tokenStore;
     private final Key signingKey;
@@ -43,7 +42,7 @@ public class AuthTokenService {
         log.info("Generating token applicationId={}", applicationId);
         // Align with JWT claim + validation (epoch millis) so TokenStore keys match lookups.
         Instant generatedTime = Instant.ofEpochMilli(Instant.now().toEpochMilli());
-        Instant expiryTime = generatedTime.plus(TTL);
+        Instant expiryTime = generatedTime.plus(authProperties.getTtl());
 
         boolean randomRevalidation = shouldRevalidate();
         log.debug(
@@ -71,6 +70,7 @@ public class AuthTokenService {
         return TokenGenerateResponse.builder()
                 .generatedTime(generatedTime)
                 .token(jwt)
+                .applicationId(applicationId)
                 .build();
     }
 

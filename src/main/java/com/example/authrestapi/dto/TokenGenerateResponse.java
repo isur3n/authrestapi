@@ -5,6 +5,7 @@ import lombok.Builder;
 
 @Builder
 public record TokenGenerateResponse(
+        String applicationId,
         Instant generatedTime,
         String token
 ) {}
