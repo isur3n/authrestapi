@@ -6,6 +6,7 @@ import lombok.Builder;
 @Builder
 public record TokenValidateRequest(
         Instant generatedTime,
-        String token
+        String token,
+        String applicationId
 ) {}
 

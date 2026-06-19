@@ -4,5 +4,5 @@ import lombok.Builder;
 
 @Builder
 public record TokenValidationResponse(
-        String applicationId
-) {}
+                TokenStatus validation) {
+}

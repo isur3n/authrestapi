@@ -45,18 +45,16 @@ public class AuthController {
     @PostMapping("/token/validate")
     public TokenValidationResponse validate(@Valid @RequestBody TokenValidateRequest request) {
         log.info(
-                "POST /token/validate called generatedTime={}",
+                "POST /token/validate called applicationId={} generatedTime={}",
+                request.applicationId(),
                 request.generatedTime()
         );
-        log.debug("Validating JWT tokenLength={}", request.token().length());
-        try {
-            TokenValidationResponse response = authTokenService.validateAndGetApplicationId(request);
-            log.info("Token validated successfully applicationId={}", response.applicationId());
-            return response;
-        } catch (ResponseStatusException e) {
-            log.debug("Token validation failed status={} reason={}", e.getStatusCode(), e.getReason());
-            throw e;
+        if (request.token() != null) {
+            log.debug("Validating JWT tokenLength={}", request.token().length());
         }
+        TokenValidationResponse response = authTokenService.validateToken(request);
+        log.info("Token validation result: {}", response.validation());
+        return response;
     }
 }
 

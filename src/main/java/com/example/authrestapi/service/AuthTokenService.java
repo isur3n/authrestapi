@@ -2,11 +2,13 @@ package com.example.authrestapi.service;
 
 import com.example.authrestapi.config.AuthProperties;
 import com.example.authrestapi.dto.TokenGenerateResponse;
+import com.example.authrestapi.dto.TokenStatus;
 import com.example.authrestapi.dto.TokenValidateRequest;
 import com.example.authrestapi.dto.TokenValidationResponse;
 import com.example.authrestapi.store.TokenStore;
 import lombok.extern.slf4j.Slf4j;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -72,8 +74,13 @@ public class AuthTokenService {
                 .build();
     }
 
-    public TokenValidationResponse validateAndGetApplicationId(TokenValidateRequest request) {
-        log.info("Validating token generatedTime={}", request.generatedTime());
+    public TokenValidationResponse validateToken(TokenValidateRequest request) {
+        if (request.token() == null || request.generatedTime() == null || request.applicationId() == null) {
+            log.warn("Request is missing required fields");
+            return new TokenValidationResponse(TokenStatus.FAILED);
+        }
+
+        log.info("Validating token generatedTime={} applicationId={}", request.generatedTime(), request.applicationId());
         log.debug("Validating JWT tokenLength={}", request.token().length());
         Claims claims;
         try {
@@ -82,38 +89,47 @@ public class AuthTokenService {
                     .build()
                     .parseSignedClaims(request.token())
                     .getPayload();
+        } catch (ExpiredJwtException e) {
+            log.warn("JWT is expired: {}", e.getMessage());
+            return new TokenValidationResponse(TokenStatus.EXPIRED);
         } catch (JwtException | IllegalArgumentException e) {
             log.warn("JWT validation failed: {}", e.getMessage());
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid JWT token");
+            return new TokenValidationResponse(TokenStatus.FAILED);
         }
 
-        String applicationId = claims.get("applicationId", String.class);
+        String claimApplicationId = claims.get("applicationId", String.class);
         Long generatedTimeMillis = claims.get("generatedTime", Long.class);
-        if (applicationId == null || generatedTimeMillis == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing required claims");
+        if (claimApplicationId == null || generatedTimeMillis == null) {
+            log.warn("JWT is missing required claims");
+            return new TokenValidationResponse(TokenStatus.FAILED);
+        }
+
+        if (!claimApplicationId.equals(request.applicationId())) {
+            log.warn("Application ID mismatch: claim={}, request={}", claimApplicationId, request.applicationId());
+            return new TokenValidationResponse(TokenStatus.FAILED);
         }
 
         Instant generatedTime = Instant.ofEpochMilli(generatedTimeMillis);
         Instant requestTime = Instant.ofEpochMilli(request.generatedTime().toEpochMilli());
         log.debug(
                 "JWT claims applicationId={} generatedTimeMillis={} requestGeneratedTime={}",
-                applicationId,
+                claimApplicationId,
                 generatedTimeMillis,
                 request.generatedTime()
         );
         if (!generatedTime.equals(requestTime)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Generated time mismatch");
+            log.warn("Generated time mismatch: claim={}, request={}", generatedTime, requestTime);
+            return new TokenValidationResponse(TokenStatus.FAILED);
         }
 
-        String stored = tokenStore.retrieveToken(applicationId, generatedTime)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token not recognized"));
-
-        if (!stored.equals(request.token())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token not recognized");
+        String stored = tokenStore.retrieveToken(claimApplicationId, generatedTime).orElse(null);
+        if (stored == null || !stored.equals(request.token())) {
+            log.warn("Token not recognized in TokenStore");
+            return new TokenValidationResponse(TokenStatus.FAILED);
         }
 
-        log.info("Token validated applicationId={}", applicationId);
-        return new TokenValidationResponse(applicationId);
+        log.info("Token validated successfully applicationId={}", claimApplicationId);
+        return new TokenValidationResponse(TokenStatus.SUCCESS);
     }
 
     private boolean shouldRevalidate() {

@@ -1,5 +1,6 @@
 package com.example.authrestapi.controller;
 
+import com.example.authrestapi.config.AuthProperties;
 import com.example.authrestapi.dto.TokenValidateRequest;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,9 @@ class AuthControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private AuthProperties authProperties;
+
     @Test
     void shouldReturn400WhenApplicationIdIsNotTenCharacters() throws Exception {
         mockMvc.perform(get("/token").param("applicationId", "abc"))
@@ -46,6 +50,7 @@ class AuthControllerTest {
         String token = node.get("token").asText();
 
         TokenValidateRequest validateRequest = TokenValidateRequest.builder()
+                .applicationId(appId)
                 .generatedTime(generatedTime)
                 .token(token)
                 .build();
@@ -54,7 +59,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validateRequest)))
                 .andExpect(status().isOk())
-                .andExpect(content().json("{\"applicationId\":\"abcdefghij\"}"));
+                .andExpect(content().json("{\"validation\":\"success\"}"));
     }
 
     @Test
@@ -70,6 +75,7 @@ class AuthControllerTest {
         String token = node.get("token").asText();
 
         TokenValidateRequest validateRequest = TokenValidateRequest.builder()
+                .applicationId(appId)
                 .generatedTime(generatedTime.plusSeconds(1))
                 .token(token)
                 .build();
@@ -77,7 +83,8 @@ class AuthControllerTest {
         mockMvc.perform(post("/token/validate")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validateRequest)))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isOk())
+                .andExpect(content().json("{\"validation\":\"failed\"}"));
     }
 
     @Test
@@ -94,6 +101,7 @@ class AuthControllerTest {
 
         String invalidToken = token + "x";
         TokenValidateRequest validateRequest = TokenValidateRequest.builder()
+                .applicationId(appId)
                 .generatedTime(generatedTime)
                 .token(invalidToken)
                 .build();
@@ -101,7 +109,66 @@ class AuthControllerTest {
         mockMvc.perform(post("/token/validate")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validateRequest)))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isOk())
+                .andExpect(content().json("{\"validation\":\"failed\"}"));
+    }
+
+    @Test
+    void shouldRejectWhenApplicationIdMismatch() throws Exception {
+        String appId = "abcdefghij";
+
+        MvcResult generateResult = mockMvc.perform(get("/token").param("applicationId", appId))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode node = objectMapper.readTree(generateResult.getResponse().getContentAsString());
+        Instant generatedTime = Instant.parse(node.get("generatedTime").asText());
+        String token = node.get("token").asText();
+
+        TokenValidateRequest validateRequest = TokenValidateRequest.builder()
+                .applicationId("different1")
+                .generatedTime(generatedTime)
+                .token(token)
+                .build();
+
+        mockMvc.perform(post("/token/validate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validateRequest)))
+                .andExpect(status().isOk())
+                .andExpect(content().json("{\"validation\":\"failed\"}"));
+    }
+
+    @Test
+    void shouldReturnExpiredWhenTokenIsExpired() throws Exception {
+        String appId = "abcdefghij";
+        java.security.Key signingKey = io.jsonwebtoken.security.Keys.hmacShaKeyFor(
+                authProperties.getJwt().getSecret().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        
+        Instant generatedTime = Instant.now().minus(java.time.Duration.ofHours(2));
+        Instant expiryTime = generatedTime.plus(java.time.Duration.ofHours(1));
+
+        String expiredToken = io.jsonwebtoken.Jwts.builder()
+                .subject(appId)
+                .issuedAt(java.util.Date.from(generatedTime))
+                .expiration(java.util.Date.from(expiryTime))
+                .claim("applicationId", appId)
+                .claim("generatedTime", generatedTime.toEpochMilli())
+                .claim("expiryTime", expiryTime.toEpochMilli())
+                .claim("randomRevalidation", false)
+                .signWith(signingKey, io.jsonwebtoken.SignatureAlgorithm.HS256)
+                .compact();
+
+        TokenValidateRequest validateRequest = TokenValidateRequest.builder()
+                .applicationId(appId)
+                .generatedTime(generatedTime)
+                .token(expiredToken)
+                .build();
+
+        mockMvc.perform(post("/token/validate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validateRequest)))
+                .andExpect(status().isOk())
+                .andExpect(content().json("{\"validation\":\"expired\"}"));
     }
 }
 
