@@ -1,7 +1,7 @@
-package com.example.authrestapi.controller;
+package me.suren.fullstackapp.authrestapi.controller;
 
-import com.example.authrestapi.config.AuthProperties;
-import com.example.authrestapi.dto.TokenValidateRequest;
+import me.suren.fullstackapp.authprovider.config.AuthProperties;
+import me.suren.fullstackapp.authprovider.dto.TokenValidateRequest;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

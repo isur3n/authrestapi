@@ -1,4 +1,4 @@
-package com.example.authrestapi.exception.handler;
+package me.suren.fullstackapp.authrestapi.controller.advice;
 
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;

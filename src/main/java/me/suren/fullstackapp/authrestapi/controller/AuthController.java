@@ -1,9 +1,9 @@
-package com.example.authrestapi.controller;
+package me.suren.fullstackapp.authrestapi.controller;
 
-import com.example.authrestapi.dto.TokenGenerateResponse;
-import com.example.authrestapi.dto.TokenValidateRequest;
-import com.example.authrestapi.dto.TokenValidationResponse;
-import com.example.authrestapi.service.AuthTokenService;
+import me.suren.fullstackapp.authprovider.dto.TokenGenerateResponse;
+import me.suren.fullstackapp.authprovider.dto.TokenValidateRequest;
+import me.suren.fullstackapp.authprovider.dto.TokenValidationResponse;
+import me.suren.fullstackapp.authprovider.service.AuthTokenService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import lombok.extern.slf4j.Slf4j;
@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 @Slf4j
 @RestController

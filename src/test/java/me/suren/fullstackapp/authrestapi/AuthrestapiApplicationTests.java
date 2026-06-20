@@ -1,4 +1,4 @@
-package com.example.authrestapi;
+package me.suren.fullstackapp.authrestapi;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
