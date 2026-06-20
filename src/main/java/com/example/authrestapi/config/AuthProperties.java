@@ -5,7 +5,6 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AccessLevel;
 import lombok.Data;
-import lombok.Getter;
 import lombok.Setter;
 
 import org.springframework.beans.factory.InitializingBean;
@@ -44,7 +43,7 @@ public class AuthProperties implements InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        if(this.ttl == null) {
+        if (this.ttl == null) {
             this.ttl = Duration.ofSeconds(300);
         }
     }

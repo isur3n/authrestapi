@@ -15,13 +15,10 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.concurrent.ThreadLocalRandom;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 @Slf4j
 @Service
@@ -35,12 +32,14 @@ public class AuthTokenService {
         this.tokenStore = tokenStore;
         this.authProperties = authProperties;
         this.signingKey = Keys.hmacShaKeyFor(authProperties.getJwt().getSecret().getBytes(StandardCharsets.UTF_8));
-        log.info("AuthTokenService initialized revalidationPercentage={}", authProperties.getRevalidation().getPercentage());
+        log.info("AuthTokenService initialized revalidationPercentage={}",
+                authProperties.getRevalidation().getPercentage());
     }
 
     public TokenGenerateResponse generateToken(String applicationId) {
         log.info("Generating token applicationId={}", applicationId);
-        // Align with JWT claim + validation (epoch millis) so TokenStore keys match lookups.
+        // Align with JWT claim + validation (epoch millis) so TokenStore keys match
+        // lookups.
         Instant generatedTime = Instant.ofEpochMilli(Instant.now().toEpochMilli());
         Instant expiryTime = generatedTime.plus(authProperties.getTtl());
 
@@ -50,8 +49,7 @@ public class AuthTokenService {
                 applicationId,
                 generatedTime,
                 expiryTime,
-                randomRevalidation
-        );
+                randomRevalidation);
 
         String jwt = Jwts.builder()
                 .subject(applicationId)
@@ -80,12 +78,14 @@ public class AuthTokenService {
             return new TokenValidationResponse(TokenStatus.FAILED);
         }
 
-        log.info("Validating token generatedTime={} applicationId={}", request.generatedTime(), request.applicationId());
+        log.info("Validating token generatedTime={} applicationId={}", request.generatedTime(),
+                request.applicationId());
         log.debug("Validating JWT tokenLength={}", request.token().length());
         Claims claims;
         try {
             claims = Jwts.parser()
-                    .verifyWith(Keys.hmacShaKeyFor(authProperties.getJwt().getSecret().getBytes(StandardCharsets.UTF_8)))
+                    .verifyWith(
+                            Keys.hmacShaKeyFor(authProperties.getJwt().getSecret().getBytes(StandardCharsets.UTF_8)))
                     .build()
                     .parseSignedClaims(request.token())
                     .getPayload();
@@ -115,8 +115,7 @@ public class AuthTokenService {
                 "JWT claims applicationId={} generatedTimeMillis={} requestGeneratedTime={}",
                 claimApplicationId,
                 generatedTimeMillis,
-                request.generatedTime()
-        );
+                request.generatedTime());
         if (!generatedTime.equals(requestTime)) {
             log.warn("Generated time mismatch: claim={}, request={}", generatedTime, requestTime);
             return new TokenValidationResponse(TokenStatus.FAILED);
@@ -134,9 +133,10 @@ public class AuthTokenService {
 
     private boolean shouldRevalidate() {
         int percentage = authProperties.getRevalidation().getPercentage();
-        if (percentage <= 0) return false;
-        if (percentage >= 100) return true;
+        if (percentage <= 0)
+            return false;
+        if (percentage >= 100)
+            return true;
         return ThreadLocalRandom.current().nextInt(100) < percentage;
     }
 }
-
