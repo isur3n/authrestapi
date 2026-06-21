@@ -37,32 +37,41 @@ class AuthControllerTest {
                                 .andExpect(status().isBadRequest());
         }
 
-        @Test
-        void shouldGenerateAndValidateToken() throws Exception {
-                String appId = "abcdefghij";
+    @Test
+    void shouldGenerateAndValidateToken() throws Exception {
+        String appId = "abcdefghij";
 
-                MvcResult generateResult = mockMvc.perform(get("/token").param("applicationId", appId))
-                                .andExpect(status().isOk())
-                                .andReturn();
+        MvcResult generateResult = mockMvc.perform(get("/token").param("applicationId", appId))
+                        .andExpect(status().isOk())
+                        .andReturn();
 
-                JsonNode node = objectMapper.readTree(generateResult.getResponse().getContentAsString());
-                Instant generatedTime = Instant.parse(node.get("generatedTime").asText());
-                String token = node.get("token").asText();
-                String responseAppId = node.get("applicationId").asText();
-                org.junit.jupiter.api.Assertions.assertEquals(appId, responseAppId);
+        String roundtripHeader = generateResult.getResponse().getHeader("x-api-roundtrip");
+        org.junit.jupiter.api.Assertions.assertNotNull(roundtripHeader);
+        org.junit.jupiter.api.Assertions.assertTrue(roundtripHeader.matches("\\d+"));
 
-                TokenValidateRequest validateRequest = TokenValidateRequest.builder()
-                                .applicationId(appId)
-                                .generatedTime(generatedTime)
-                                .token(token)
-                                .build();
+        JsonNode node = objectMapper.readTree(generateResult.getResponse().getContentAsString());
+        Instant generatedTime = Instant.parse(node.get("generatedTime").asText());
+        String token = node.get("token").asText();
+        String responseAppId = node.get("applicationId").asText();
+        org.junit.jupiter.api.Assertions.assertEquals(appId, responseAppId);
 
-                mockMvc.perform(post("/token/validate")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(validateRequest)))
-                                .andExpect(status().isOk())
-                                .andExpect(content().json("{\"validation\":\"success\"}"));
-        }
+        TokenValidateRequest validateRequest = TokenValidateRequest.builder()
+                        .applicationId(appId)
+                        .generatedTime(generatedTime)
+                        .token(token)
+                        .build();
+
+        MvcResult validateResult = mockMvc.perform(post("/token/validate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validateRequest)))
+                        .andExpect(status().isOk())
+                        .andExpect(content().json("{\"validation\":\"success\"}"))
+                        .andReturn();
+
+        String validateRoundtripHeader = validateResult.getResponse().getHeader("x-api-roundtrip");
+        org.junit.jupiter.api.Assertions.assertNotNull(validateRoundtripHeader);
+        org.junit.jupiter.api.Assertions.assertTrue(validateRoundtripHeader.matches("\\d+"));
+    }
 
         @Test
         void shouldRejectWhenGeneratedTimeMismatch() throws Exception {
